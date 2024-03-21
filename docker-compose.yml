@@ -1,0 +1,28 @@
+version: '3.9'
+services:
+  app:
+    container_name: FloodControlService
+    build: .
+      args:
+        N_INTERVAL_SECONDS: 3
+        K_CALLS_LIMIT: 3
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    depends_on:
+      - redis
+    command:
+      [
+        "CMD",
+        "/app/main --redis=redis:6379 --limit=${K_CALLS_LIMIT} --interval=${N_INTERVAL_SECONDS}"
+      ]
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 10s
+      retries: 5

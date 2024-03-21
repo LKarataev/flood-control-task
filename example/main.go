@@ -6,13 +6,24 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/LKarataev/flood-control-task/internal/limiter"
+	"github.com/LKarataev/flood-control-task/limiter"
 )
 
-const callFreq = 400 * time.Millisecond
+const callFreq = 1000 * time.Millisecond
 
 type FloodControl interface {
 	Check(ctx context.Context, userID int64) (bool, error)
+}
+
+func parseConfig() limiter.Config {
+	var config limiter.Config
+	var interval int
+	flag.StringVar(&config.Address, "redis", "localhost:6379", `redis address`)
+	flag.IntVar(&interval, "interval", 5, "Interval in seconds (N)")
+	flag.Int64Var(&config.Limit, "limit", 5, "Maximum calls in N seconds (K)")
+	flag.Parse()
+	config.Interval = time.Duration(interval) * time.Second
+	return config
 }
 
 func main() {
@@ -20,33 +31,23 @@ func main() {
 	ctx := context.Background()
 	var userID int64 = 555
 
-	var fc FloodControl
-	fc = limiter.New(config)
+	var fc FloodControl = limiter.New(config)
 
-	for i := 0; i < 20; i++ {
+	fmt.Println("Interval (N):", config.Interval)
+	fmt.Println("Limit calls (K):", config.Limit)
+	fmt.Println("Call frequency:", callFreq)
+	for i := 0; i < 15; i++ {
 		ok, err := fc.Check(ctx, userID)
 		if err != nil {
 			fmt.Println("Error: ", err)
 			return
 		}
 		if ok {
-			fmt.Printf("Call [%d] - Passed\n", i)
+			fmt.Printf("Call [%d] -\x1b[32m Passed \x1b[0m\n", i)
 		} else {
-			fmt.Printf("Call [%d] - Failed\n", i)
+			fmt.Printf("Call [%d] -\x1b[33m Failed \x1b[0m\n", i)
 		}
 		time.Sleep(callFreq)
 	}
-}
-
-func parseConfig() Config {
-	var cfg Config
-	var secInterval int
-	flag.StringVar(&cfg.Address, "redis", "localhost:6379", `redis address (default: "localhost:6379")`)
-	flag.IntVar(&secInterval, "interval", 5, "Interval in seconds (N)")
-	flag.IntVar(&cfg.RateLimit, "limit", 5, "Maximum calls in N seconds (K)")
-	flag.Parse()
-
-	cfg.Interval = time.Duration(secInterval) * time.Second
-	cfg.BurstLimit = int(cfg.RateLimit)
-	return cfg
+	fmt.Println("End of example!")
 }

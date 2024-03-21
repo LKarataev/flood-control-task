@@ -1,4 +1,5 @@
 all: run
 
 run:
-	docker build # --build-arg N=10 --build-arg K=10
+	docker compose down
+	docker compose up --build
